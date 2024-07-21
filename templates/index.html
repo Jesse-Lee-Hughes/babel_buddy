@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Capture</title>
+    <style>
+        body {
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #recordButton {
+            background-color: #6200ea;
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #recordButton:hover {
+            background-color: #3700b3;
+        }
+        #audioPlayback {
+            display: none;
+            margin-top: 20px;
+            background-color: #6200ea;
+            border: none;
+            border-radius: 30px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <button id="recordButton">Hold to Record</button>
+        <audio id="audioPlayback" controls></audio>
+    </div>
+    <script>
+        const recordButton = document.getElementById('recordButton');
+        const audioPlayback = document.getElementById('audioPlayback');
+        let mediaRecorder;
+        let audioChunks = [];
+
+        recordButton.addEventListener('mousedown', async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayback.src = audioUrl;
+                audioPlayback.style.display = 'block';
+
+                audioChunks = [];
+
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'audio.wav');
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                console.log(result);
+            };
+
+            mediaRecorder.start();
+        });
+
+        recordButton.addEventListener('mouseup', () => {
+            mediaRecorder.stop();
+        });
+    </script>
+</body>
+</html>
