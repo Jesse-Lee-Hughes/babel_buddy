@@ -1,41 +1,36 @@
-"""
-https://azure.microsoft.com/en-us/pricing/details/cognitive-services/speech-services/
-
-"""
 import os
 
 import azure.cognitiveservices.speech as speechsdk
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-class AzureSpeechToText:
-    def __init__(self, subscription_key, region):
-        self.subscription_key = subscription_key
-        self.region = region
-        self.speech_config = speechsdk.SpeechConfig(subscription=self.subscription_key, region=self.region)
-        self.audio_config = speechsdk.audio.AudioConfig(use_default_microphone=True)
+class AzureSpeechTranscribe:
+    def __init__(self, api_key: str, region: str, audio_file_path: str):
+        self.speech_config = speechsdk.SpeechConfig(subscription=api_key, region=region)
+        self.audio_config = speechsdk.audio.AudioConfig(filename=audio_file_path)
         self.speech_recognizer = speechsdk.SpeechRecognizer(
-            speech_config=self.speech_config, audio_config=self.audio_config
-        )
+            speech_config=self.speech_config, audio_config=self.audio_config)
 
     def transcribe(self):
-        print("Speak into your microphone.")
         result = self.speech_recognizer.recognize_once()
-
         if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-            print("Recognized: {}".format(result.text))
+            print(f'Transcript: {result.text}')
         elif result.reason == speechsdk.ResultReason.NoMatch:
-            print("No speech could be recognized: {}".format(result.no_match_details))
+            print('No speech could be recognized')
         elif result.reason == speechsdk.ResultReason.Canceled:
-            cancellation_details = result.cancellation_details
-            print("Speech Recognition canceled: {}".format(cancellation_details.reason))
+            cancellation_details = speechsdk.CancellationDetails.from_result(result)
+            print(f'Speech Recognition canceled: {cancellation_details.reason}')
             if cancellation_details.reason == speechsdk.CancellationReason.Error:
-                print("Error details: {}".format(cancellation_details.error_details))
+                print(f'Error details: {cancellation_details.error_details}')
 
 
-if __name__ == "__main__":
-    subscription_key = os.environ['SPEECH_API_KEY']
-    region = os.environ['SPEECH_REGION']
-    assert subscription_key
-    assert region
-    azure_speech_to_text = AzureSpeechToText(subscription_key, region)
-    azure_speech_to_text.transcribe()
+def test_transcriber():
+    speech_key = os.environ['SPEECH_API_KEY']
+    service_region = os.environ['SPEECH_REGION']
+    audio_file_path = os.path.expanduser('~/repos/canto/uploads/converted_audio.wav')
+    if not os.path.isfile(audio_file_path):
+        raise FileNotFoundError(f"The audio file does not exist at {audio_file_path}")
+    api = AzureSpeechTranscribe(speech_key, service_region, audio_file_path)
+    api.transcribe()
