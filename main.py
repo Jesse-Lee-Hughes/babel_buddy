@@ -2,7 +2,8 @@ import os
 
 import dotenv
 import ffmpeg
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
+
 from library.speech.speech import AzureSpeechTranscribe
 
 dotenv.load_dotenv()
@@ -11,7 +12,8 @@ speech_region = os.getenv('SPEECH_REGION')
 speech_key = os.getenv('SPEECH_API_KEY')
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['UPLOADS_FOLDER'] = 'uploads/'
+app.config['DOCUMENTS_FOLDER'] = 'documents/'
 
 
 @app.route('/')
@@ -38,6 +40,37 @@ def convert_to_pcm_wav(input_path):
         raise
 
 
+@app.route('/download_synthesized_audio', methods=['GET'])
+def get_synthesized_audio():
+    try:
+        file_path = os.path.abspath('uploads/synthesized_audio.wav')
+        print(f"Serving file from: {file_path}")
+
+        if not os.path.isfile(file_path):
+            return jsonify({"error": "File does not exist"}), 404
+
+        return send_file(
+            file_path,
+            as_attachment=True,
+            mimetype='audio/wav'
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/download_transcription', methods=['GET'])
+def get_transcription():
+    try:
+        return send_file(
+            'documents/translate.txt',
+            as_attachment=True,
+            download_name='translated.txt',  # `download_name` for Flask >=2.0
+            mimetype='text/plain'
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/upload', methods=['POST'])
 def transcribe_audio():
     try:
@@ -50,23 +83,46 @@ def transcribe_audio():
             return jsonify({"error": "No selected file"}), 400
 
         # Save the file to a temporary location
-        rel_file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
         file.save(rel_file_path)
+        print(f"File saved to {rel_file_path}")
 
-        # Convert to PCM WAV if needed (implement the actual logic)
+        # Convert to PCM WAV if needed
         convert_to_pcm_wav(rel_file_path)
+        print("File converted to PCM WAV format")
 
         # Ensure the file exists
         if not os.path.isfile(rel_file_path):
             return jsonify({"error": f"The audio file does not exist at {rel_file_path}"}), 400
 
         # Initialize and use AzureSpeechTranscribe
-        speech_api = AzureSpeechTranscribe(speech_key, speech_region, rel_file_path)
+        speech_api = AzureSpeechTranscribe(speech_key, speech_region, rel_file_path, target_language='yue')
         result = speech_api.transcribe()
-        return jsonify({"success": True, "result": result}), 200
+        print(f"Transcription result: {result}")
+
+        # Ensure transcription result is not None
+        if result is None:
+            return jsonify({"error": "Transcription result is None"}), 500
+
+        # Save the transcription result
+        txt_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
+        with open(txt_path, 'w+') as f:
+            f.write(result)
+
+        # Synthesize speech from the result
+        synthesized_audio_path = os.path.expanduser('~/repos/canto/uploads/synthesized_audio.wav')
+        speech_api.synthesize_speech(result, language='yue', output_path=synthesized_audio_path)
+
+        # Send the synthesized audio file as an attachment
+        return send_file(
+            synthesized_audio_path,
+            as_attachment=True,
+            mimetype='audio/wav'
+        )
     except Exception as e:
+        print(f"Error: {str(e)}")  # Log the error
         return jsonify({"error": str(e)}), 500
-[]
+
 
 if __name__ == '__main__':
     app.run(debug=True)
