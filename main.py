@@ -22,9 +22,7 @@ def index():
 
 
 def convert_to_pcm_wav(input_path):
-    # Create a temporary file path for the converted output with .wav extension
     temp_output_path = f"{input_path}.tmp.wav"
-
     try:
         # Perform the conversion to the temporary file
         ffmpeg.input(input_path).output(temp_output_path, acodec='pcm_s16le', ac=1, ar='16000').run()
@@ -40,7 +38,7 @@ def convert_to_pcm_wav(input_path):
         raise
 
 
-@app.route('/download_synthesized_audio', methods=['GET'])
+@app.route('/audio', methods=['GET'])
 def get_synthesized_audio():
     try:
         file_path = os.path.abspath('uploads/synthesized_audio.wav')
@@ -58,13 +56,13 @@ def get_synthesized_audio():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/download_transcription', methods=['GET'])
+@app.route('/text', methods=['GET'])
 def get_transcription():
     try:
         return send_file(
             'documents/translate.txt',
             as_attachment=True,
-            download_name='translated.txt',  # `download_name` for Flask >=2.0
+            download_name='translated.txt',
             mimetype='text/plain'
         )
     except Exception as e:
@@ -73,55 +71,61 @@ def get_transcription():
 
 @app.route('/upload', methods=['POST'])
 def transcribe_audio():
-    try:
-        # Check for the audio file in the request
-        if 'audio' not in request.files:
-            return jsonify({"error": "No file part"}), 400
+    # try:
+    # Check for the audio file in the request
+    if 'audio' not in request.files:
+        return jsonify({"error": "Audio file not present."}), 400
 
-        file = request.files['audio']
-        if file.filename == '':
-            return jsonify({"error": "No selected file"}), 400
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({"error": "Unable to load audio file"}), 400
 
-        # Save the file to a temporary location
-        rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
-        file.save(rel_file_path)
-        print(f"File saved to {rel_file_path}")
+    input_language = request.form.get('input_language', 'en-US')
+    output_language = request.form.get('output_language', 'yue')
 
-        # Convert to PCM WAV if needed
-        convert_to_pcm_wav(rel_file_path)
-        print("File converted to PCM WAV format")
+    # Save the file to a temporary location
+    rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
+    file.save(rel_file_path)
+    print(f"File saved to {rel_file_path}")
 
-        # Ensure the file exists
-        if not os.path.isfile(rel_file_path):
-            return jsonify({"error": f"The audio file does not exist at {rel_file_path}"}), 400
+    # Convert to PCM WAV if needed
+    convert_to_pcm_wav(rel_file_path)
+    print("File converted to PCM WAV format")
 
-        # Initialize and use AzureSpeechTranscribe
-        speech_api = AzureSpeechTranscribe(speech_key, speech_region, rel_file_path, target_language='yue')
-        result = speech_api.transcribe()
-        print(f"Transcription result: {result}")
+    # Ensure the file exists
+    if not os.path.isfile(rel_file_path):
+        return jsonify({"error": f"The audio file does not exist at {rel_file_path}"}), 400
 
-        # Ensure transcription result is not None
-        if result is None:
-            return jsonify({"error": "Transcription result is None"}), 500
+    # Initialize and use AzureSpeechTranscribe
+    speech_api = AzureSpeechTranscribe(
+        speech_key,
+        speech_region,
+        rel_file_path,
+        input_language=input_language,
+        output_language=output_language
+    )
+    result = speech_api.transcribe()
+    print(f"Transcription result: {result}")
 
-        # Save the transcription result
-        txt_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
-        with open(txt_path, 'w+') as f:
-            f.write(result)
+    # Ensure transcription result is not None
+    if result is None:
+        return jsonify({"error": "Transcription result is None"}), 500
 
-        # Synthesize speech from the result
-        synthesized_audio_path = os.path.expanduser('~/repos/canto/uploads/synthesized_audio.wav')
-        speech_api.synthesize_speech(result, language='yue', output_path=synthesized_audio_path)
+    # Save the transcription result
+    txt_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
+    with open(txt_path, 'w+') as f:
+        f.write(result)
 
-        # Send the synthesized audio file as an attachment
-        return send_file(
-            synthesized_audio_path,
-            as_attachment=True,
-            mimetype='audio/wav'
-        )
-    except Exception as e:
-        print(f"Error: {str(e)}")  # Log the error
-        return jsonify({"error": str(e)}), 500
+    # Synthesize speech from the result
+    synthesized_audio_path = os.path.expanduser('~/repos/canto/uploads/synthesized_audio.wav')
+    speech_api.synthesize_speech(result, target_language=output_language, output_path=synthesized_audio_path)
+
+    # Send the synthesized audio file as an attachment
+    return send_file(
+        synthesized_audio_path,
+        as_attachment=True,
+        mimetype='audio/wav'
+    )
 
 
 if __name__ == '__main__':
