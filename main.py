@@ -5,130 +5,116 @@ import ffmpeg
 from flask import Flask, render_template, request, jsonify, send_file
 
 from library.base.log_handler import get_logger
-from library.speech.speech import AzureSpeechTranscribe
+from library.speech import SpeechTranscriber, SpeechSynthesizer
 
 dotenv.load_dotenv()
 
-speech_region = os.getenv('SPEECH_REGION')
-speech_key = os.getenv('SPEECH_API_KEY')
-
+# Configuration
 app = Flask(__name__)
 app.config['UPLOADS_FOLDER'] = 'uploads/'
 app.config['DOCUMENTS_FOLDER'] = 'documents/'
 
 logger = get_logger(__name__)
 
+# Environment Variables
+speech_region = os.getenv('SPEECH_REGION')
+speech_key = os.getenv('SPEECH_API_KEY')
 
+
+# Error Handling Decorator
+def handle_exceptions(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error in {func.__name__}: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+
+# Helper Functions
+def convert_to_pcm_wav(input_path):
+    temp_output_path = f"{input_path}.tmp.wav"
+    try:
+        ffmpeg.input(input_path).output(temp_output_path, acodec='pcm_s16le', ac=1, ar='16000').run()
+        os.replace(temp_output_path, input_path)
+    except ffmpeg.Error as e:
+        logger.critical(f'Conversion error: {e.stderr.decode()}')
+        raise
+    except Exception as e:
+        logger.critical(f'Unexpected error: {e}')
+        raise
+
+
+def save_transcription(result, folder):
+    txt_path = os.path.join(folder, 'translate.txt')
+    with open(txt_path, 'w+') as f:
+        f.write(result)
+    return txt_path
+
+
+def synthesize_speech(api, text, output_language, folder):
+    output_path = os.path.join(folder, 'synthesized_audio.wav')
+    api.synthesize_speech(text, target_language=output_language, output_path=output_path)
+    return output_path
+
+
+# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
-def convert_to_pcm_wav(input_path):
-    temp_output_path = f"{input_path}.tmp.wav"
-    try:
-        # Perform the conversion to the temporary file
-        ffmpeg.input(input_path).output(temp_output_path, acodec='pcm_s16le', ac=1, ar='16000').run()
-
-        # Replace the original file with the converted file
-        os.replace(temp_output_path, input_path)
-
-    except ffmpeg.Error as e:
-        logger.critical(f'An error occurred during conversion: {e.stderr.decode()}')
-        raise
-    except Exception as e:
-        logger.critical(f'An unexpected error occurred: {e}')
-        raise
-
-
 @app.route('/audio', methods=['GET'])
+@handle_exceptions
 def get_synthesized_audio():
-    try:
-        file_path = os.path.abspath('uploads/synthesized_audio.wav')
-        logger.debug(f"Serving file from: {file_path}")
-
-        if not os.path.isfile(file_path):
-            return jsonify({"error": "File does not exist"}), 404
-
-        return send_file(
-            file_path,
-            as_attachment=True,
-            mimetype='audio/wav'
-        )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    file_path = os.path.abspath(os.path.join(app.config['UPLOADS_FOLDER'], 'synthesized_audio.wav'))
+    logger.debug(f"Serving file from: {file_path}")
+    if not os.path.isfile(file_path):
+        return jsonify({"error": "File does not exist"}), 404
+    return send_file(file_path, as_attachment=True, mimetype='audio/wav')
 
 
 @app.route('/text', methods=['GET'])
+@handle_exceptions
 def get_transcription():
-    try:
-        return send_file(
-            'documents/translate.txt',
-            as_attachment=True,
-            download_name='translated.txt',
-            mimetype='text/plain'
-        )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    file_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
+    return send_file(file_path, as_attachment=True, download_name='translated.txt', mimetype='text/plain')
 
 
 @app.route('/upload', methods=['POST'])
+@handle_exceptions
 def transcribe_audio():
-    # try:
-    # Check for the audio file in the request
-    if 'audio' not in request.files:
-        return jsonify({"error": "Audio file not present."}), 400
+    if 'audio' not in request.files or not request.files['audio'].filename:
+        return jsonify({"error": "Invalid audio file"}), 400
 
     file = request.files['audio']
-    if file.filename == '':
-        return jsonify({"error": "Unable to load audio file"}), 400
-
     input_language = request.form.get('input_language', 'en-US')
     output_language = request.form.get('output_language', 'yue')
 
-    # Save the file to a temporary location
+    # Save and Convert Audio File
     rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
     file.save(rel_file_path)
     logger.debug(f"File saved to {rel_file_path}")
-
-    # Convert to PCM WAV if needed
     convert_to_pcm_wav(rel_file_path)
-    logger.debug("File converted to PCM WAV format")
 
-    # Ensure the file exists
-    if not os.path.isfile(rel_file_path):
-        return jsonify({"error": f"The audio file does not exist at {rel_file_path}"}), 400
-
-    # Initialize and use AzureSpeechTranscribe
-    speech_api = AzureSpeechTranscribe(
-        speech_key,
-        speech_region,
-        rel_file_path,
-        input_language=input_language,
-        output_language=output_language
-    )
+    # Transcribe Audio
+    speech_api = SpeechTranscriber(speech_key, speech_region, rel_file_path, input_language=input_language,
+                                   output_language=output_language)
     result = speech_api.transcribe()
-    logger.debug(f"Transcription result: {result}")
 
-    # Ensure transcription result is not None
     if result is None:
-        return jsonify({"error": "Transcription result is None"}), 500
+        return jsonify({"error": "Transcription failed"}), 500
 
-    # Save the transcription result
-    txt_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
-    with open(txt_path, 'w+') as f:
-        f.write(result)
+    # Save Transcription and Synthesize Speech
+    txt_path = save_transcription(result, app.config['DOCUMENTS_FOLDER'])
+    audio_path = synthesize_speech(SpeechSynthesizer(speech_key, speech_region), result, output_language,
+                                   app.config['UPLOADS_FOLDER'])
 
-    # Synthesize speech from the result
-    synthesized_audio_path = os.path.expanduser('~/repos/canto/uploads/synthesized_audio.wav')
-    speech_api.synthesize_speech(result, target_language=output_language, output_path=synthesized_audio_path)
-
-    # Send the synthesized audio file as an attachment
-    return send_file(
-        synthesized_audio_path,
-        as_attachment=True,
-        mimetype='audio/wav'
-    )
+    # Send Synthesized Audio File
+    return send_file(audio_path, as_attachment=True, mimetype='audio/wav')
 
 
 if __name__ == '__main__':
