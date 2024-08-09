@@ -9,6 +9,7 @@ To assist in the live translation between different languages.
 
 
 ## Demo
+Initial proof of concept
 https://github.com/user-attachments/assets/a96efc79-0f02-4c79-bcf2-c1e3a2bfcffd
 
 
@@ -19,4 +20,11 @@ https://github.com/user-attachments/assets/a96efc79-0f02-4c79-bcf2-c1e3a2bfcffd
 
 ## Design
 
-TBA
+Design Option: Distributed Workers
+Pros:
+- horizontal scalability at the API and worker level
+- asynchronous processing of tasks
+
+<p align="center"> 
+  <img src="https://github.com/user-attachments/assets/07deffdb-5e8c-4699-a609-112cf122da3e">
+</p>
