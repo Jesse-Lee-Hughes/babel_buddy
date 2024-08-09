@@ -4,6 +4,8 @@ import azure.cognitiveservices.speech as speechsdk
 import ffmpeg
 from dotenv import load_dotenv
 
+from library.base.log_handler import get_logger
+
 load_dotenv()
 
 
@@ -11,8 +13,17 @@ class UnsupportedFileType(Exception):
     pass
 
 
+class SpeechTranscriberException(Exception):
+    pass
+
+
+class SpeechSynthesizerException(Exception):
+    pass
+
+
 class AzureSpeechTranscribe:
     def __init__(self, api_key: str, region: str, audio_file_path: str, input_language: str, output_language: str):
+        self.logger = get_logger(self.__class__.__name__)
         self.region = region
         self.api_key = api_key
         self.speech_translation_config = speechsdk.translation.SpeechTranslationConfig(subscription=api_key,
@@ -30,20 +41,17 @@ class AzureSpeechTranscribe:
     def transcribe(self):
         result = self.translation_recognizer.recognize_once()
         if result.reason == speechsdk.ResultReason.TranslatedSpeech:
-            # Print available translations for debugging
-            print(f"Available translations: {result.translations}")
-
-            # Check if the output language is in the translations
+            self.logger.debug(f"Available translations: {result.translations}")
             target_language = self.speech_translation_config.target_languages[0]
             if target_language in result.translations:
                 return result.translations[target_language]
             else:
-                raise Exception(f"Target language {target_language} not found in translations.")
+                raise SpeechTranscriberException(f"Target language {target_language} not found in translations.")
         elif result.reason == speechsdk.ResultReason.NoMatch:
-            raise Exception('No speech could be recognized')
+            raise SpeechTranscriberException('No speech could be recognized')
         elif result.reason == speechsdk.ResultReason.Canceled:
             cancellation_details = speechsdk.CancellationDetails(result)
-            raise Exception(
+            raise SpeechTranscriberException(
                 f'Speech Recognition canceled: {cancellation_details.reason}. '
                 f'Error details: {cancellation_details.error_details}'
             )
@@ -53,7 +61,7 @@ class AzureSpeechTranscribe:
         result = self.speech_synthesizer.speak_text_async(text).get()
 
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            print(f"Speech synthesized for text [{text}]")
+            self.logger.debug(f"Speech synthesized for text [{text}]")
 
             if output_path:
                 output_path = os.path.expanduser(output_path)
@@ -63,14 +71,14 @@ class AzureSpeechTranscribe:
                 try:
                     with open(output_path, 'wb') as audio_file:
                         audio_file.write(result.audio_data)
-                    print(f"Audio saved to {output_path}")
+                    self.logger.debug(f"Audio saved to {output_path}")
                 except Exception as e:
-                    print(f"Failed to save audio: {e}")
+                    self.logger.critical(f"Failed to save audio: {e}")
 
         elif result.reason == speechsdk.ResultReason.Canceled:
             cancellation_details = speechsdk.CancellationDetails(result)
-            print(f"Speech synthesis canceled: {cancellation_details.reason}")
-            print(f"Error details: {cancellation_details.error_details}")
+            self.logger.error(
+                f"Speech synthesis canceled: {cancellation_details.reason} Error details: {cancellation_details.error_details}")
 
     def is_pcm_wav(self, file_path):
         """Check if the audio file is already in the correct format."""
@@ -85,7 +93,7 @@ class AzureSpeechTranscribe:
                         return True
             return False
         except ffmpeg.Error as e:
-            print(f'Error probing file format: {e}')
+            self.logger.error(f'Error probing file format: {e}')
             raise
 
 

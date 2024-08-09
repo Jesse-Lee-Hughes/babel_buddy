@@ -4,6 +4,7 @@ import dotenv
 import ffmpeg
 from flask import Flask, render_template, request, jsonify, send_file
 
+from library.base.log_handler import get_logger
 from library.speech.speech import AzureSpeechTranscribe
 
 dotenv.load_dotenv()
@@ -14,6 +15,8 @@ speech_key = os.getenv('SPEECH_API_KEY')
 app = Flask(__name__)
 app.config['UPLOADS_FOLDER'] = 'uploads/'
 app.config['DOCUMENTS_FOLDER'] = 'documents/'
+
+logger = get_logger(__name__)
 
 
 @app.route('/')
@@ -31,10 +34,10 @@ def convert_to_pcm_wav(input_path):
         os.replace(temp_output_path, input_path)
 
     except ffmpeg.Error as e:
-        print(f'An error occurred during conversion: {e.stderr.decode()}')
+        logger.critical(f'An error occurred during conversion: {e.stderr.decode()}')
         raise
     except Exception as e:
-        print(f'An unexpected error occurred: {e}')
+        logger.critical(f'An unexpected error occurred: {e}')
         raise
 
 
@@ -42,7 +45,7 @@ def convert_to_pcm_wav(input_path):
 def get_synthesized_audio():
     try:
         file_path = os.path.abspath('uploads/synthesized_audio.wav')
-        print(f"Serving file from: {file_path}")
+        logger.debug(f"Serving file from: {file_path}")
 
         if not os.path.isfile(file_path):
             return jsonify({"error": "File does not exist"}), 404
@@ -86,11 +89,11 @@ def transcribe_audio():
     # Save the file to a temporary location
     rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
     file.save(rel_file_path)
-    print(f"File saved to {rel_file_path}")
+    logger.debug(f"File saved to {rel_file_path}")
 
     # Convert to PCM WAV if needed
     convert_to_pcm_wav(rel_file_path)
-    print("File converted to PCM WAV format")
+    logger.debug("File converted to PCM WAV format")
 
     # Ensure the file exists
     if not os.path.isfile(rel_file_path):
@@ -105,7 +108,7 @@ def transcribe_audio():
         output_language=output_language
     )
     result = speech_api.transcribe()
-    print(f"Transcription result: {result}")
+    logger.debug(f"Transcription result: {result}")
 
     # Ensure transcription result is not None
     if result is None:
