@@ -1,0 +1,5 @@
+Flask
+Flask-Cors
+ffmpeg-python
+python-dotenv
+azure-cognitiveservices-speech
