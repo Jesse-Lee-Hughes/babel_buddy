@@ -6,7 +6,9 @@ RUN pip install --upgrade pip
 # Install required packages for building and running the app
 RUN apt-get update && \
     apt-get install -y build-essential ca-certificates libasound2-dev libssl-dev wget && \
+    apt-get install -y ffmpeg && \
     rm -rf /var/lib/apt/lists/*
+
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' nonroot
