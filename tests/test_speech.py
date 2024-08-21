@@ -1,5 +1,5 @@
 import os
-from library.speech import  SpeechSynthesizer, SpeechTranscriber, UnsupportedFileType
+from backend.library.speech import  SpeechSynthesizer, SpeechTranscriber, UnsupportedFileType
 def test_transcriber():
     speech_key = os.environ['SPEECH_API_KEY']
     service_region = os.environ['SPEECH_REGION']
