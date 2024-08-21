@@ -48,6 +48,8 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            -webkit-user-select: none; /* Disable text selection on iOS */
+            -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
         }
 
         #recordButton:hover {
@@ -111,7 +113,7 @@
     let mediaRecorder;
     let audioChunks = [];
 
-    recordButton.addEventListener('mousedown', async () => {
+    const startRecording = async () => {
         recordButton.style.backgroundColor = 'red';
         try {
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
@@ -159,14 +161,26 @@
         } catch (error) {
             console.error('Error during recording setup:', error);
         }
-    });
+    };
 
-    recordButton.addEventListener('mouseup', () => {
+    const stopRecording = () => {
         recordButton.style.backgroundColor = '#6200ea';
         if (mediaRecorder) {
             mediaRecorder.stop();
         }
+    };
+
+    // Add event listeners for both mouse and touch events
+    recordButton.addEventListener('mousedown', startRecording);
+    recordButton.addEventListener('mouseup', stopRecording);
+    recordButton.addEventListener('touchstart', startRecording);
+    recordButton.addEventListener('touchend', stopRecording);
+
+    // Prevent default context menu and text selection
+    recordButton.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
     });
+
 </script>
 </body>
 </html>
