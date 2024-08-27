@@ -7,7 +7,7 @@ RUN apk add --no-cache bash openssl
 RUN mkdir -p /etc/nginx/ssl
 
 # Generate self-signed SSL certificate
-RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/nginx/ssl/server.key -x509 -days 365 -out /etc/nginx/ssl/server.crt -subj "/C=AU/ST=QLD/L=BNE/O=Babbler/OU=Babbler/CN=20.5.196.24"
+RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/nginx/ssl/server.key -x509 -days 365 -out /etc/nginx/ssl/server.crt -subj "/C=AU/ST=QLD/L=BNE/O=BabelBuddy/OU=BabelBuddy/CN=babelbuddy.com.au"
 
 # Set permissions for SSL files
 RUN chmod 600 /etc/nginx/ssl/server.key && \
