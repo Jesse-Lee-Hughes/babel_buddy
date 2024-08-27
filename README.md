@@ -1,4 +1,4 @@
-# Babel Fish
+# Babel Buddy
 <p align="center">
   <img src="https://github.com/user-attachments/assets/018a847e-2ccc-4f78-9e92-29dcc05f799e" alt="babel fish">
 </p>
