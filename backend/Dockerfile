@@ -13,6 +13,7 @@ RUN apt-get update && \
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' nonroot
 RUN mkdir /home/app/ && chown -R nonroot:nonroot /home/app
+RUN mkdir /home/app/documents && chown -R nonroot:nonroot /home/app/documents
 RUN mkdir -p /var/log/flask-app && touch /var/log/flask-app/flask-app.err.log && touch /var/log/flask-app/flask-app.out.log
 RUN chown -R nonroot:nonroot /var/log/flask-app
 
