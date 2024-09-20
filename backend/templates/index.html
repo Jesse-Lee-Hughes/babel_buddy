@@ -1,79 +1,11 @@
+<meta charset="UTF-8">
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babel Fish</title>
-    <style>
-        body {
-            background-color: #121212;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            color: #ffffff;
-            text-align: center;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .dropdown-container {
-            display: flex;
-            justify-content: center;
-            gap: 20px; /* Adjust the gap between dropdowns */
-            margin-bottom: 20px;
-        }
-
-        .dropdown {
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #333;
-            border-radius: 5px;
-            background-color: #222;
-            color: #fff;
-        }
-
-        #recordButton {
-            background-color: #6200ea;
-            color: white;
-            border: none;
-            padding: 20px 40px;
-            font-size: 18px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            -webkit-user-select: none; /* Disable text selection on iOS */
-            -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
-        }
-
-        #recordButton:hover {
-            background-color: #3700b3;
-        }
-
-        #audioPlayback {
-            display: none;
-            margin-top: 20px;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        #transcription {
-            display: none;
-            margin-top: 20px;
-            font-size: 16px;
-            background-color: #333;
-            padding: 15px;
-            border-radius: 5px;
-            max-width: 400px;
-            width: 100%;
-        }
-    </style>
+    <title>Babel Buddy</title>
+    <link rel="stylesheet" type="text/css" href="../static/styles/style.css">
 </head>
 <body>
 <div class="container">
@@ -81,8 +13,13 @@
         <div>
             <select id="inputLanguage" class="dropdown">
                 <option value="en-US">English</option>
-                <option value="es-ES">Spanish</option>
-                <option value="fr-FR">French</option>
+                <option value="yue">Chinese</option>
+                <option value="th">Thai</option>
+                <option value="fr">French</option>
+                <option value="ja">Japanese</option>
+                <option value="es">Spanish</option>
+                <option value="ru">Russian</option>
+                <option value="zu">Zulu</option>
                 <!-- Add more languages as needed -->
             </select>
         </div>

@@ -11,8 +11,8 @@ dotenv.load_dotenv()
 
 # Configuration
 app = Flask(__name__)
-app.config['UPLOADS_FOLDER'] = 'uploads/'
-app.config['DOCUMENTS_FOLDER'] = 'documents/'
+app.config['UPLOADS_FOLDER'] = '/tmp/'
+app.config['DOCUMENTS_FOLDER'] = '/tmp/'
 
 logger = get_logger(__name__)
 
