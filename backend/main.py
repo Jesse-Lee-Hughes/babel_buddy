@@ -2,7 +2,7 @@ import os
 
 import dotenv
 import ffmpeg
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
 
 from library.base.log_handler import get_logger
 from library.speech import SpeechTranscriber, SpeechSynthesizer
@@ -67,22 +67,6 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/audio', methods=['GET'])
-@handle_exceptions
-def get_synthesized_audio():
-    file_path = os.path.abspath(os.path.join(app.config['UPLOADS_FOLDER'], 'synthesized_audio.wav'))
-    logger.debug(f"Serving file from: {file_path}")
-    if not os.path.isfile(file_path):
-        return jsonify({"error": "File does not exist"}), 404
-    return send_file(file_path, as_attachment=True, mimetype='audio/wav')
-
-
-@app.route('/text', methods=['GET'])
-@handle_exceptions
-def get_transcription():
-    file_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
-    return send_file(file_path, as_attachment=True, download_name='translated.txt', mimetype='text/plain')
-
 @app.route('/process_audio', methods=['POST'])
 @handle_exceptions
 def process_audio():
@@ -125,39 +109,6 @@ def process_audio():
     }
 
     return jsonify(response), 200
-
-
-@app.route('/upload', methods=['POST'])
-@handle_exceptions
-def transcribe_audio():
-    if 'audio' not in request.files or not request.files['audio'].filename:
-        return jsonify({"error": "Invalid audio file"}), 400
-
-    file = request.files['audio']
-    input_language = request.form.get('input_language', 'en-US')
-    output_language = request.form.get('output_language', 'yue')
-
-    # Save and Convert Audio File
-    rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
-    file.save(rel_file_path)
-    logger.debug(f"File saved to {rel_file_path}")
-    convert_to_pcm_wav(rel_file_path)
-
-    # Transcribe Audio
-    speech_api = SpeechTranscriber(speech_key, speech_region, rel_file_path, input_language=input_language,
-                                   output_language=output_language)
-    result = speech_api.transcribe()
-
-    if result is None:
-        return jsonify({"error": "Transcription failed"}), 500
-
-    # Save Transcription and Synthesize Speech
-    txt_path = save_transcription(result, app.config['DOCUMENTS_FOLDER'])
-    audio_path = synthesize_speech(SpeechSynthesizer(speech_key, speech_region), result, output_language,
-                                   app.config['UPLOADS_FOLDER'])
-
-    # Send Synthesized Audio File
-    return send_file(audio_path, as_attachment=True, mimetype='audio/wav')
 
 
 if __name__ == "__main__":
