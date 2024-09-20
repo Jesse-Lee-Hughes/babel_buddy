@@ -83,6 +83,49 @@ def get_transcription():
     file_path = os.path.join(app.config['DOCUMENTS_FOLDER'], 'translate.txt')
     return send_file(file_path, as_attachment=True, download_name='translated.txt', mimetype='text/plain')
 
+@app.route('/process_audio', methods=['POST'])
+@handle_exceptions
+def process_audio():
+    if 'audio' not in request.files or not request.files['audio'].filename:
+        return jsonify({"error": "Invalid audio file"}), 400
+
+    file = request.files['audio']
+    input_language = request.form.get('input_language', 'en-US')
+    output_language = request.form.get('output_language', 'yue')
+
+    # Save and Convert Audio File
+    rel_file_path = os.path.join(app.config['UPLOADS_FOLDER'], file.filename)
+    file.save(rel_file_path)
+    logger.debug(f"File saved to {rel_file_path}")
+    convert_to_pcm_wav(rel_file_path)
+
+    # Transcribe Audio
+    speech_api = SpeechTranscriber(speech_key, speech_region, rel_file_path, input_language=input_language,
+                                   output_language=output_language)
+    result = speech_api.transcribe()
+
+    if result is None:
+        return jsonify({"error": "Transcription failed"}), 500
+
+    # Save Transcription
+    txt_path = save_transcription(result, app.config['DOCUMENTS_FOLDER'])
+
+    # Synthesize Speech
+    audio_path = synthesize_speech(SpeechSynthesizer(speech_key, speech_region), result, output_language,
+                                   app.config['UPLOADS_FOLDER'])
+
+    # Read the audio file to return as response
+    with open(audio_path, 'rb') as audio_file:
+        audio_data = audio_file.read()
+
+    # Return both audio and transcription
+    response = {
+        "transcription": result,
+        "synthesized_audio": audio_data.decode('latin1'),  # Encode the bytes to string for JSON
+    }
+
+    return jsonify(response), 200
+
 
 @app.route('/upload', methods=['POST'])
 @handle_exceptions

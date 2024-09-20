@@ -1,4 +1,3 @@
-<meta charset="UTF-8">
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,8 +37,8 @@
         </div>
     </div>
     <button id="recordButton">Hold to Record</button>
-    <audio id="audioPlayback" controls></audio>
-    <div id="transcription"></div>
+    <audio id="audioPlayback" controls style="display:none;"></audio>
+    <div id="transcription" style="display:none;"></div>
 </div>
 <script>
     const recordButton = document.getElementById('recordButton');
@@ -53,7 +52,7 @@
     const startRecording = async () => {
         recordButton.style.backgroundColor = 'red';
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
 
             mediaRecorder.ondataavailable = event => {
@@ -61,7 +60,7 @@
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, {type: 'audio/wav'});
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 audioChunks = [];
 
                 const formData = new FormData();
@@ -69,28 +68,41 @@
                 formData.append('input_language', inputLanguage.value);
                 formData.append('output_language', outputLanguage.value);
 
-                const response = await fetch('/upload', {
+                const response = await fetch('/process_audio', {
                     method: 'POST',
                     body: formData,
                 });
 
                 if (response.ok) {
-                    // Fetch the processed audio from the backend
-                    const audioResponse = await fetch('/audio');
-                    const audioBlob = await audioResponse.blob();
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    audioPlayback.src = audioUrl;
-                    audioPlayback.style.display = 'block';
-                    audioPlayback.play();
+                    const data = await response.json();
 
-                    // Fetch the transcribed text from the backend
-                    const textResponse = await fetch('/text');
-                    const transcribedText = await textResponse.text();
-                    transcriptionDiv.textContent = transcribedText;
+                    // Ensure audio data is handled as Blob
+                    if (data.synthesized_audio) {
+                        // Convert string to Uint8Array
+                        const audioArray = new Uint8Array(data.synthesized_audio.length);
+                        for (let i = 0; i < data.synthesized_audio.length; i++) {
+                            audioArray[i] = data.synthesized_audio.charCodeAt(i) & 0xff;
+                        }
+
+                        const audioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        audioPlayback.src = audioUrl;
+                        audioPlayback.style.display = 'block'; // Show audio element
+
+                        audioPlayback.onloadedmetadata = () => {
+                            audioPlayback.play();
+                        };
+
+                        console.log('Audio Blob size:', audioBlob.size);
+                    } else {
+                        console.error('No audio data returned from the server.');
+                    }
+
+                    transcriptionDiv.textContent = data.transcription || 'Transcription unavailable.';
                     transcriptionDiv.style.display = 'block';
                 } else {
                     const result = await response.json();
-                    console.error('Error uploading audio:', result);
+                    console.error('Error processing audio:', result);
                 }
             };
 
@@ -117,7 +129,6 @@
     recordButton.addEventListener('contextmenu', (event) => {
         event.preventDefault();
     });
-
 </script>
 </body>
 </html>
