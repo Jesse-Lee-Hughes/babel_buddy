@@ -32,6 +32,7 @@ body {
     color: #fff;
 }
 
+/* Center the record button */
 #recordButton {
     background-color: #6200ea;
     color: white;
@@ -43,6 +44,7 @@ body {
     transition: background-color 0.3s ease;
     -webkit-user-select: none; /* Disable text selection on iOS */
     -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
+    margin: 20px 0; /* Space between dropdowns and button */
 }
 
 #recordButton:hover {
@@ -65,4 +67,23 @@ body {
     border-radius: 5px;
     max-width: 400px;
     width: 100%;
+}
+
+#errorMessage {
+    border: none;
+    padding: 20px 40px;
+    font-size: 18px;
+}
+
+/* Ensure everything is centered */
+.container {
+    position: relative; /* Allow absolute positioning of children */
+    height: 100%; /* Full height for centering */
+}
+
+#title {
+    margin-top: 200px;
+    font-size: 32px; /* Adjust size as needed */
+    margin-bottom: 32px; /* Space below the heading */
+    color: #ffffff; /* Heading color */
 }

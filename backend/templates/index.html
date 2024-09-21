@@ -8,6 +8,7 @@
 </head>
 <body>
 <div class="container">
+    <h1 id="title">Babel Buddy</h1>
     <div class="dropdown-container">
         <div>
             <select id="inputLanguage" class="dropdown">
@@ -36,7 +37,8 @@
             </select>
         </div>
     </div>
-    <button id="recordButton">Hold to Record</button>
+    <button id="recordButton">Translate</button>
+    <div id="errorMessage" style="color: red; display: none;"></div>
     <audio id="audioPlayback" controls style="display:none;"></audio>
     <div id="transcription" style="display:none;"></div>
 </div>
@@ -46,13 +48,37 @@
     const transcriptionDiv = document.getElementById('transcription');
     const inputLanguage = document.getElementById('inputLanguage');
     const outputLanguage = document.getElementById('outputLanguage');
+    const errorMessageDiv = document.getElementById('errorMessage');
+    const languageButtonText = {
+        "en-US": "Translate", // English
+        "yue": "翻译", // Chinese
+        "th": "แปล", // Thai
+        "fr": "Traduire", // French
+        "ja": "翻訳する", // Japanese
+        "es": "Traducir", // Spanish
+        "ru": "Перевести", // Russian
+        "zu": "Humusha", // Zulu
+    };
     let mediaRecorder;
     let audioChunks = [];
+
+    const updateButtonText = () => {
+        const selectedLanguage = inputLanguage.value;
+        recordButton.textContent = languageButtonText[selectedLanguage || "Translate"];
+    }
+    // Update button text on language change
+    inputLanguage.addEventListener('change', updateButtonText);
+
+    const hideUIItems = async () => {
+        errorMessageDiv.style.display = 'none'; // Hide error message initially
+        transcriptionDiv.style.display = 'none'
+        audioPlayback.style.display = 'none'
+    };
 
     const startRecording = async () => {
         recordButton.style.backgroundColor = 'red';
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({audio: true});
             mediaRecorder = new MediaRecorder(stream);
 
             mediaRecorder.ondataavailable = event => {
@@ -60,18 +86,27 @@
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioBlob = new Blob(audioChunks, {type: 'audio/wav'});
                 audioChunks = [];
-
+                console.log('Audio Blob size before sending:', audioBlob.size);
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
                 formData.append('input_language', inputLanguage.value);
                 formData.append('output_language', outputLanguage.value);
+                // Clear any previous error message
+                hideUIItems()
+                if (audioBlob.size === 0) {
+                    errorMessageDiv.textContent = 'No data was recorded. Please try again.'; // Set error message
+                    errorMessageDiv.style.display = 'block'; // Show error message
+                    return; // Exit the function early
+                }
+
 
                 const response = await fetch('/process_audio', {
                     method: 'POST',
                     body: formData,
                 });
+
 
                 if (response.ok) {
                     const data = await response.json();
@@ -84,7 +119,7 @@
                             audioArray[i] = data.synthesized_audio.charCodeAt(i) & 0xff;
                         }
 
-                        const audioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                        const audioBlob = new Blob([audioArray], {type: 'audio/wav'});
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayback.src = audioUrl;
                         audioPlayback.style.display = 'block'; // Show audio element
@@ -102,6 +137,15 @@
                     transcriptionDiv.style.display = 'block';
                 } else {
                     const result = await response.json();
+                    console.log(result);
+
+                    if (result.error) {
+                        errorMessageDiv.textContent = result.error; // Set only the error message
+                    } else {
+                        errorMessageDiv.textContent = 'An unknown error occurred.'; // Fallback message
+                    }
+
+                    errorMessageDiv.style.display = 'block'; // Show error message
                     console.error('Error processing audio:', result);
                 }
             };
@@ -112,10 +156,17 @@
         }
     };
 
+    // const stopRecording = () => {
+    //     recordButton.style.backgroundColor = '#6200ea';
+    //     if (mediaRecorder) {
+    //         mediaRecorder.stop();
+    //     }
+    // };
     const stopRecording = () => {
         recordButton.style.backgroundColor = '#6200ea';
         if (mediaRecorder) {
             mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Stop all audio tracks
         }
     };
 
@@ -129,6 +180,7 @@
     recordButton.addEventListener('contextmenu', (event) => {
         event.preventDefault();
     });
+    updateButtonText();
 </script>
 </body>
 </html>

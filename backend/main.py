@@ -5,7 +5,7 @@ import ffmpeg
 from flask import Flask, render_template, request, jsonify
 
 from library.base.log_handler import get_logger
-from library.speech import SpeechTranscriber, SpeechSynthesizer
+from library.speech import SpeechTranscriber, SpeechSynthesizer, SpeechTranscriberException
 
 dotenv.load_dotenv()
 
@@ -68,7 +68,6 @@ def index():
 
 
 @app.route('/process_audio', methods=['POST'])
-@handle_exceptions
 def process_audio():
     if 'audio' not in request.files or not request.files['audio'].filename:
         return jsonify({"error": "Invalid audio file"}), 400
@@ -86,10 +85,13 @@ def process_audio():
     # Transcribe Audio
     speech_api = SpeechTranscriber(speech_key, speech_region, rel_file_path, input_language=input_language,
                                    output_language=output_language)
-    result = speech_api.transcribe()
+    try:
+        result = speech_api.transcribe()
+    except SpeechTranscriberException as e:
+        return jsonify({"error": str(e)}), 422
 
     if result is None:
-        return jsonify({"error": "Transcription failed"}), 500
+        return jsonify({"error": "Transcription failed"}), 400
 
     # Save Transcription
     txt_path = save_transcription(result, app.config['DOCUMENTS_FOLDER'])
