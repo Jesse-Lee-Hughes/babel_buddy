@@ -1,9 +1,18 @@
 import os
-from backend.library.speech import  SpeechSynthesizer, SpeechTranscriber, UnsupportedFileType
+
+from library.audio.audio import convert_to_pcm_wav
+from library.speech import SpeechSynthesizer, SpeechTranscriber, UnsupportedFileType
+
+
+def test_convert_to_pcm_wav():
+    audio_file_path = os.path.expanduser('synthesized_audio.wav')
+    convert_to_pcm_wav(audio_file_path)
+
+
 def test_transcriber():
     speech_key = os.environ['SPEECH_API_KEY']
     service_region = os.environ['SPEECH_REGION']
-    audio_file_path = os.path.expanduser('~/repos/canto/uploads/audio.wav')
+    audio_file_path = os.path.expanduser('audio.wav')
     input_language = 'en-US'
     output_language = 'fr'
     if not os.path.isfile(audio_file_path):

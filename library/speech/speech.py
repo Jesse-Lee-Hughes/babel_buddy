@@ -3,6 +3,8 @@ import os
 import azure.cognitiveservices.speech as speechsdk
 import ffmpeg
 from dotenv import load_dotenv
+import tempfile
+from pathlib import Path
 
 from library.base.log_handler import get_logger
 
@@ -114,3 +116,33 @@ class SpeechSynthesizer:
         except ffmpeg.Error as e:
             self.logger.error(f'Error probing file format: {e}')
             raise
+
+    def convert_to_pcm_wav(self, input_path):
+        input_path = Path(input_path)
+        try:
+            # Create a temporary file in the same directory as the input file
+            with tempfile.NamedTemporaryFile(suffix=".wav", dir=input_path.parent, delete=False) as temp_output_file:
+                temp_output_path = temp_output_file.name
+
+            # Convert the file using ffmpeg, and allow overwriting the output
+            ffmpeg.input(str(input_path)).output(temp_output_path, acodec='pcm_s16le', ac=1, ar='16000').run(
+                overwrite_output=True)
+
+            # Replace the original file with the converted one
+            os.replace(temp_output_path, input_path)
+
+        except ffmpeg.Error as e:
+            # Handle cases where stderr is None
+            stderr_output = e.stderr.decode() if e.stderr else "No detailed error message."
+            self.logger.critical(f'Conversion error: {stderr_output}')
+            raise
+        except AttributeError as e:
+            self.logger.critical(f'AttributeError: {e}')
+            raise
+        except Exception as e:
+            self.logger.critical(f'Unexpected error: {e}')
+            raise
+        finally:
+            # Clean up temporary file if it wasn't already replaced
+            if os.path.exists(temp_output_path):
+                os.remove(temp_output_path)
