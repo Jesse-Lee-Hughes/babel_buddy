@@ -12,11 +12,10 @@ class TestSpeech(unittest.TestCase):
         cls.speech_key = os.environ.get('SPEECH_API_KEY')
         cls.service_region = os.environ.get('SPEECH_REGION')
         cls.input_language = 'en-US'
-        cls.output_language = 'yue'
+        cls.output_language = 'zh-HK'
         cls.audio_file_path = os.path.expanduser('audio_files/audio.wav')
 
         # Initialize APIs
-        cls.speech_api = SpeechSynthesizer(cls.speech_key, cls.service_region)
         cls.transcribe_api = SpeechTranscriber(
             cls.speech_key,
             cls.service_region,
@@ -24,6 +23,7 @@ class TestSpeech(unittest.TestCase):
             input_language=cls.input_language,
             output_language=cls.output_language,
         )
+        cls.speech_api = SpeechSynthesizer(cls.speech_key, cls.service_region, target_language=cls.output_language)
 
     def test_get_voices(self):
         r = self.speech_api.speech_synthesizer.get_voices_async().get()
@@ -44,6 +44,5 @@ class TestSpeech(unittest.TestCase):
         # Synthesize the translated text into speech using 'yue' for Cantonese
         self.speech_api.synthesize_speech(
             translated_text,
-            target_language=self.output_language,
             output_path='audio_files/synthesized_audio.wav'
         )

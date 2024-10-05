@@ -3,44 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Babel Buddy</title>
     <link rel="stylesheet" type="text/css" href="../static/styles/style.css">
     <link rel="icon" href="../static/images/android-chrome-512x512.png" type="image/png">
     <!-- Open Graph meta tags -->
-    <meta property="og:title" content="Babel Buddy" />
-    <meta property="og:description" content="An interactive tool for real time language translation." />
-    <meta property="og:image" content="https://babelbuddy.com.au/static/images/babel_fish.png" />
-    <meta property="og:url" content="https://babelbuddy.com.au" />
-    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Babel Buddy"/>
+    <meta property="og:description" content="An interactive tool for real time language translation."/>
+    <meta property="og:image" content="https://babelbuddy.com.au/static/images/babel_fish.png"/>
+    <meta property="og:url" content="https://babelbuddy.com.au"/>
+    <meta property="og:type" content="website"/>
 
     <!-- Twitter Card meta tags -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Babel Buddy" />
-    <meta name="twitter:description" content="An interactive tool for real time language translation." />
-    <meta name="twitter:image" content="https://babelbuddy.com.au/static/images/babel_fish.png" />
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" content="Babel Buddy"/>
+    <meta name="twitter:description" content="An interactive tool for real time language translation."/>
+    <meta name="twitter:image" content="https://babelbuddy.com.au/static/images/babel_fish.png"/>
 </head>
 <body>
 <div class="container">
     <h1 id="title">Babel Buddy</h1>
     <div class="dropdown-container">
         <div>
-            <select id="inputLanguage" class="dropdown">
-                <option value="en-US">English</option>
-                <option value="yue">Chinese</option>
-            </select>
+            <select id="inputLanguage" class="dropdown"></select>
         </div>
         <div>
-            <select id="outputLanguage" class="dropdown">
-                <option value="yue">Chinese</option>
-                <option value="th">Thai</option>
-                <option value="fr">French</option>
-                <option value="ja">Japanese</option>
-                <option value="es">Spanish</option>
-                <option value="ru">Russian</option>
-                <option value="en">English</option>
-                <option value="zu">Zulu</option>
-            </select>
+            <select id="outputLanguage" class="dropdown"></select>
         </div>
     </div>
     <button id="recordButton">Translate</button>
@@ -55,30 +42,76 @@
     const inputLanguage = document.getElementById('inputLanguage');
     const outputLanguage = document.getElementById('outputLanguage');
     const errorMessageDiv = document.getElementById('errorMessage');
-    const languageButtonText = {
-        "en-US": "Translate", // English
-        "yue": "翻译", // Chinese
-        "th": "แปล", // Thai
-        "fr": "Traduire", // French
-        "ja": "翻訳する", // Japanese
-        "es": "Traducir", // Spanish
-        "ru": "Перевести", // Russian
-        "zu": "Humusha", // Zulu
+
+    const languages = [
+        {code: "en-US", name: "English", buttonText: "Translate"},
+        {code: "zh-HK", name: "Cantonese", buttonText: "翻译"},
+        {code: "zh-CN", name: "Mandarin", buttonText: "翻译"},
+        {code: "th-TH", name: "Thai", buttonText: "แปล"},
+        {code: "fr-FR", name: "French", buttonText: "Traduire"},
+        {code: "ja-JP", name: "Japanese", buttonText: "翻訳する"},
+        {code: "es-ES", name: "Spanish", buttonText: "Traducir"},
+        {code: "ru-RU", name: "Russian", buttonText: "Перевести"},
+        {code: "zu-ZA", name: "Zulu", buttonText: "Humusha"},
+    ];
+
+    const populateDropdowns = () => {
+        // Clear existing options
+        inputLanguage.innerHTML = '';
+        outputLanguage.innerHTML = '';
+
+        languages.forEach(lang => {
+            const option = document.createElement("option");
+            option.value = lang.code;
+            option.textContent = lang.name;
+            inputLanguage.appendChild(option.cloneNode(true));
+            outputLanguage.appendChild(option.cloneNode(true));
+        });
     };
-    let mediaRecorder;
-    let audioChunks = [];
+
+    const updateOutputDropdown = () => {
+        const selectedInputLanguage = inputLanguage.value;
+
+        // Clear existing options
+        outputLanguage.innerHTML = '';
+
+        languages.forEach(lang => {
+            if (lang.code !== selectedInputLanguage) {
+                const option = document.createElement("option");
+                option.value = lang.code;
+                option.textContent = lang.name;
+                outputLanguage.appendChild(option);
+            }
+        });
+    };
 
     const updateButtonText = () => {
         const selectedLanguage = inputLanguage.value;
-        recordButton.textContent = languageButtonText[selectedLanguage || "Translate"];
-    }
-    // Update button text on language change
-    inputLanguage.addEventListener('change', updateButtonText);
+        const languageObj = languages.find(lang => lang.code === selectedLanguage);
+        recordButton.textContent = languageObj ? languageObj.buttonText : "Translate";
+    };
+
+    // Populate the dropdowns on initial load
+    populateDropdowns();
+    // Initialize output dropdown on page load
+    updateOutputDropdown();
+    // Update button text on initial load
+    updateButtonText();
+
+    // Add event listeners
+    inputLanguage.addEventListener('change', () => {
+        updateOutputDropdown();
+        updateButtonText();
+    });
+
+    // The rest of your existing JavaScript code goes here...
+    let mediaRecorder;
+    let audioChunks = [];
 
     const hideUIItems = async () => {
         errorMessageDiv.style.display = 'none'; // Hide error message initially
-        transcriptionDiv.style.display = 'none'
-        audioPlayback.style.display = 'none'
+        transcriptionDiv.style.display = 'none';
+        audioPlayback.style.display = 'none';
     };
 
     const startRecording = async () => {
@@ -100,19 +133,18 @@
                 formData.append('input_language', inputLanguage.value);
                 formData.append('output_language', outputLanguage.value);
                 // Clear any previous error message
-                hideUIItems()
+                hideUIItems();
                 if (audioBlob.size === 0) {
                     errorMessageDiv.textContent = 'No data was recorded. Please try again.'; // Set error message
                     errorMessageDiv.style.display = 'block'; // Show error message
                     return; // Exit the function early
                 }
 
-
+                console.log("Posting form " + formData);
                 const response = await fetch('/process_audio', {
                     method: 'POST',
                     body: formData,
                 });
-
 
                 if (response.ok) {
                     const data = await response.json();
@@ -180,7 +212,6 @@
     recordButton.addEventListener('contextmenu', (event) => {
         event.preventDefault();
     });
-    updateButtonText();
 </script>
 </body>
 </html>

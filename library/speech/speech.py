@@ -1,10 +1,10 @@
 import os
+import tempfile
+from pathlib import Path
 
 import azure.cognitiveservices.speech as speechsdk
 import ffmpeg
 from dotenv import load_dotenv
-import tempfile
-from pathlib import Path
 
 from library.base.log_handler import get_logger
 
@@ -23,17 +23,30 @@ class SpeechSynthesizerException(Exception):
     pass
 
 
+def voice_mapper(output_language: str) -> str:
+    # Fetch the voice based on the language code, or return the default
+    try:
+        voice_mapping = {
+            "zh-HK": 'zh-HK-WanLungNeural',
+            "zh-CN": 'zh-CN-YunxiNeural'
+        }
+        return voice_mapping[output_language]
+    except KeyError:
+        return ''
+
+
 class SpeechTranscriber:
     def __init__(self, api_key: str, region: str, audio_file_path: str, input_language: str, output_language: str):
         self.logger = get_logger(self.__class__.__name__)
         self.region = region
         self.api_key = api_key
 
-        self.speech_translation_config = speechsdk.translation.SpeechTranslationConfig(subscription=api_key,
-                                                                                       region=region)
+        self.speech_translation_config = speechsdk.translation.SpeechTranslationConfig(
+            subscription=api_key,
+            region=region
+        )
         self.speech_translation_config.speech_recognition_language = input_language
         self.speech_translation_config.add_target_language(output_language)
-
         self.audio_config = speechsdk.audio.AudioConfig(filename=audio_file_path)
         self.translation_recognizer = speechsdk.translation.TranslationRecognizer(
             translation_config=self.speech_translation_config, audio_config=self.audio_config
@@ -51,6 +64,9 @@ class SpeechTranscriber:
                 target_language = self.speech_translation_config.target_languages[0]
                 if target_language in result.translations:
                     return result.translations[target_language]
+                # handle edge case where the audio transcribed returns with a different key than the language used
+                elif len(result.translations.keys()) >= 1:
+                    return result.translations[list(result.translations.keys())[0]]
                 else:
                     raise SpeechTranscriberException(f"Target language {target_language} not found in translations.")
             elif result.reason == speechsdk.ResultReason.NoMatch:
@@ -71,14 +87,21 @@ class SpeechTranscriber:
 
 
 class SpeechSynthesizer:
-    def __init__(self, api_key: str, region: str):
+    def __init__(self, api_key: str, region: str, target_language: str):
         self.logger = get_logger(self.__class__.__name__)
+        self.target_language = target_language
         self.api_key = api_key
-        self.speech_config = speechsdk.SpeechConfig(subscription=api_key, region=region)
+        self.speech_config = speechsdk.SpeechConfig(
+            subscription=api_key,
+            region=region,
+        )
+        voice = voice_mapper(self.target_language)
+        if voice:
+            self.speech_config.speech_synthesis_voice_name = voice
         self.speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=self.speech_config)
 
-    def synthesize_speech(self, text, target_language, output_path=None):
-        self.speech_config.speech_synthesis_language = target_language
+    def synthesize_speech(self, text, output_path):
+        self.speech_config.speech_synthesis_language = self.target_language
         result = self.speech_synthesizer.speak_text_async(text).get()
 
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:

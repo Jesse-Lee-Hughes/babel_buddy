@@ -26,16 +26,17 @@ def index():
 
 @app.route('/process_audio', methods=['POST'])
 def process_audio():
+    file = request.files['audio']
+    input_language = request.form.get('input_language', 'en-US')
+    output_language = request.form.get('output_language', 'en-US')
+    # handle bug with cantonese and mandarin transcriptions being identical
     synth_api = SpeechSynthesizer(
         api_key=app.config['SPEECH_API_KEY'],
-        region=app.config['SPEECH_REGION']
+        region=app.config['SPEECH_REGION'],
+        target_language=output_language
     )
     if 'audio' not in request.files or not request.files['audio'].filename:
         return jsonify({"error": "Invalid audio file"}), 400
-
-    file = request.files['audio']
-    input_language = request.form.get('input_language', 'en-US')
-    output_language = request.form.get('output_language', 'yue')
 
     # Generate a unique file name using UUID
     unique_filename = f"{uuid.uuid4()}"
@@ -65,7 +66,6 @@ def process_audio():
     output_path = os.path.join(app.config['UPLOADS_FOLDER'], f'synthesized_audio_{unique_filename}.wav')
     synth_api.synthesize_speech(
         text=result,
-        target_language=output_language,
         output_path=output_path
     )
 
