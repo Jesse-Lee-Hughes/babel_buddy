@@ -33,7 +33,7 @@
         </div>
     </div>
     <button id="recordButton">
-        <img src="path/to/microphone-icon.png" alt="Microphone"/>
+        <!--        <img src="path/to/microphone-icon.png" alt="Microphone"/>-->
         Hold to Translate
     </button>
     <div id="errorMessage" style="color: #a33e1f; display: none;"></div>
@@ -113,6 +113,48 @@
         audioPlayback.style.display = 'none';
     };
 
+    const checkMicrophonePermission = async () => {
+        try {
+            const permission = await navigator.permissions.query({name: 'microphone'});
+
+            if (permission.state === 'granted') {
+                // Permission is already granted, you can use the microphone without asking again
+                console.log('Microphone permission already granted.');
+            } else if (permission.state === 'prompt') {
+                // User has not granted permission yet, request microphone access
+                console.log('Requesting microphone permission...');
+                await requestMicrophoneAccess();
+            } else if (permission.state === 'denied') {
+                // Permission has been denied, show an error or ask the user to change settings
+                console.error('Microphone access denied. Please enable it in your browser settings.');
+                errorMessageDiv.textContent = 'Microphone access denied. Please enable it in your browser settings.';
+                errorMessageDiv.style.display = 'block';
+            }
+
+            // Listen for changes in the permission state
+            permission.onchange = () => {
+                console.log('Microphone permission state changed to:', permission.state);
+            };
+        } catch (error) {
+            console.error('Error checking microphone permission:', error);
+        }
+    };
+
+    const requestMicrophoneAccess = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+            console.log('Microphone access granted.');
+            // You can now start recording
+        } catch (error) {
+            console.error('Error during microphone access:', error);
+            errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
+            errorMessageDiv.style.display = 'block';
+        }
+    };
+
+    // Call this function when the page loads
+    checkMicrophonePermission();
+
     const startRecording = async () => {
         recordButton.style.backgroundColor = 'red';
         try {
@@ -163,6 +205,10 @@
                         audioPlayback.onloadedmetadata = () => {
                             audioPlayback.play();
                         };
+                        // Refresh the page once the audio finishes playing
+                        audioPlayback.onended = () => {
+                            location.reload();
+                        };
 
                         console.log('Audio Blob size:', audioBlob.size);
                     } else {
@@ -199,6 +245,7 @@
         if (mediaRecorder) {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            recordButton.style.display = 'none';
         }
     };
 
