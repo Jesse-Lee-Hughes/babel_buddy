@@ -106,8 +106,6 @@
 
     let mediaRecorder;
     let audioChunks = [];
-    let isRecording = false;
-
 
     const hideUIItems = async () => {
         errorMessageDiv.style.display = 'none';
@@ -115,103 +113,92 @@
         audioPlayback.style.display = 'none';
     };
 
-
-    const checkMicPermissions = async () => {
-        try {
-            const permissionStatus = await navigator.permissions.query({name: 'microphone'});
-            if (permissionStatus.state === 'granted') {
-                console.log('Microphone permission granted');
-                return true;
-            } else if (permissionStatus.state === 'prompt') {
-                console.log('Microphone permission prompt');
-                // Request permission here if it's a prompt
-                const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-                stream.getTracks().forEach(track => track.stop()); // Stop the stream after granting
-                return true;
-            } else {
-                console.log('Microphone permission denied');
-                return false;
-            }
-        } catch (error) {
-            console.error('Error checking microphone permissions:', error);
-            return false;
-        }
-    };
-
-
     const startRecording = async () => {
-        if (isRecording) return; // Prevent starting a new recording if already recording
-
-        const micGranted = await checkMicPermissions();
-        if (!micGranted) {
-            errorMessageDiv.textContent = 'Microphone access is required. Please allow it in your browser settings.';
-            errorMessageDiv.style.display = 'block';
-            return;
-        }
-
         recordButton.style.backgroundColor = 'red';
-        isRecording = true;
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
             mediaRecorder = new MediaRecorder(stream);
+            audioChunks = []; // Reset audioChunks for new recording
+
             mediaRecorder.ondataavailable = event => {
                 audioChunks.push(event.data);
             };
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, {type: 'audio/wav'});
-                audioChunks = [];
+                console.log('Audio Blob size before sending:', audioBlob.size);
 
-                hideUIItems();
-
+                // Handle no data recorded case
                 if (audioBlob.size === 0) {
                     errorMessageDiv.textContent = 'No data was recorded. Please try again.';
                     errorMessageDiv.style.display = 'block';
-                    resetButton();
-                    return;
+                    return; // Exit the function early
                 }
 
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
                 formData.append('input_language', inputLanguage.value);
                 formData.append('output_language', outputLanguage.value);
+                hideUIItems();
 
-                try {
-                    const response = await fetch('/process_audio', {method: 'POST', body: formData});
+                console.log("Posting form ", formData);
+                const response = await fetch('/process_audio', {
+                    method: 'POST',
+                    body: formData,
+                });
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        handleAudioResponse(data);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.synthesized_audio) {
+                        const audioArray = new Uint8Array(data.synthesized_audio.length);
+                        for (let i = 0; i < data.synthesized_audio.length; i++) {
+                            audioArray[i] = data.synthesized_audio.charCodeAt(i) & 0xff;
+                        }
+
+                        const audioBlob = new Blob([audioArray], {type: 'audio/wav'});
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        audioPlayback.src = audioUrl;
+                        audioPlayback.style.display = 'block';
+
+                        audioPlayback.onloadedmetadata = () => {
+                            audioPlayback.play();
+                        };
+
+                        console.log('Audio Blob size:', audioBlob.size);
                     } else {
-                        handleErrorResponse(await response.json());
+                        console.error('No audio data returned from the server.');
                     }
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    errorMessageDiv.textContent = 'Error connecting to the server.';
+
+                    transcriptionDiv.textContent = data.transcription || 'Transcription unavailable.';
+                    transcriptionDiv.style.display = 'block';
+                } else {
+                    const result = await response.json();
+                    console.log(result);
+
+                    if (result.error) {
+                        errorMessageDiv.textContent = result.error;
+                    } else {
+                        errorMessageDiv.textContent = 'An unknown error occurred.';
+                    }
+
                     errorMessageDiv.style.display = 'block';
-                } finally {
-                    resetButton();
-                    isRecording = false;
+                    console.error('Error processing audio:', result);
                 }
             };
 
             mediaRecorder.start();
         } catch (error) {
             console.error('Error during recording setup:', error);
-            errorMessageDiv.textContent = 'Error accessing the microphone.';
+            errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
             errorMessageDiv.style.display = 'block';
-            resetButton();
-            isRecording = false;
         }
     };
 
     const stopRecording = () => {
         recordButton.style.backgroundColor = '#222';
-        if (mediaRecorder && isRecording) {
+        if (mediaRecorder) {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            isRecording = false;
         }
     };
 
