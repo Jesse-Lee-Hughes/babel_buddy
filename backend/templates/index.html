@@ -10,7 +10,7 @@
     <link rel="icon" href="../static/images/android-chrome-512x512.png" type="image/png">
     <!-- Open Graph meta tags -->
     <meta property="og:title" content="Babel Buddy"/>
-    <meta property="og:description" content="An interactive tool for real time language translation."/>
+    <meta property="og:description" content="An interactive tool for real-time language translation."/>
     <meta property="og:image" content="https://babelbuddy.com.au/static/images/babel_fish.png"/>
     <meta property="og:url" content="https://babelbuddy.com.au"/>
     <meta property="og:type" content="website"/>
@@ -18,7 +18,7 @@
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image"/>
     <meta name="twitter:title" content="Babel Buddy"/>
-    <meta name="twitter:description" content="An interactive tool for real time language translation."/>
+    <meta name="twitter:description" content="An interactive tool for real-time language translation."/>
     <meta name="twitter:image" content="https://babelbuddy.com.au/static/images/babel_fish.png"/>
 </head>
 <body>
@@ -60,9 +60,7 @@
         {code: "zu-ZA", name: "Zulu", buttonText: "Bamba ukuze uhumelele"},
     ];
 
-
     const populateDropdowns = () => {
-        // Clear existing options
         inputLanguage.innerHTML = '';
         outputLanguage.innerHTML = '';
 
@@ -77,8 +75,6 @@
 
     const updateOutputDropdown = () => {
         const selectedInputLanguage = inputLanguage.value;
-
-        // Clear existing options
         outputLanguage.innerHTML = '';
 
         languages.forEach(lang => {
@@ -99,9 +95,7 @@
 
     // Populate the dropdowns on initial load
     populateDropdowns();
-    // Initialize output dropdown on page load
     updateOutputDropdown();
-    // Update button text on initial load
     updateButtonText();
 
     // Add event listeners
@@ -110,12 +104,11 @@
         updateButtonText();
     });
 
-    // The rest of your existing JavaScript code goes here...
     let mediaRecorder;
     let audioChunks = [];
 
     const hideUIItems = async () => {
-        errorMessageDiv.style.display = 'none'; // Hide error message initially
+        errorMessageDiv.style.display = 'none';
         transcriptionDiv.style.display = 'none';
         audioPlayback.style.display = 'none';
     };
@@ -125,6 +118,7 @@
         try {
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
             mediaRecorder = new MediaRecorder(stream);
+            audioChunks = []; // Reset audioChunks for new recording
 
             mediaRecorder.ondataavailable = event => {
                 audioChunks.push(event.data);
@@ -132,21 +126,22 @@
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, {type: 'audio/wav'});
-                audioChunks = [];
                 console.log('Audio Blob size before sending:', audioBlob.size);
+
+                // Handle no data recorded case
+                if (audioBlob.size === 0) {
+                    errorMessageDiv.textContent = 'No data was recorded. Please try again.';
+                    errorMessageDiv.style.display = 'block';
+                    return; // Exit the function early
+                }
+
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
                 formData.append('input_language', inputLanguage.value);
                 formData.append('output_language', outputLanguage.value);
-                // Clear any previous error message
                 hideUIItems();
-                if (audioBlob.size === 0) {
-                    errorMessageDiv.textContent = 'No data was recorded. Please try again.'; // Set error message
-                    errorMessageDiv.style.display = 'block'; // Show error message
-                    return; // Exit the function early
-                }
 
-                console.log("Posting form " + formData);
+                console.log("Posting form ", formData);
                 const response = await fetch('/process_audio', {
                     method: 'POST',
                     body: formData,
@@ -154,10 +149,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
-
-                    // Ensure audio data is handled as Blob
                     if (data.synthesized_audio) {
-                        // Convert string to Uint8Array
                         const audioArray = new Uint8Array(data.synthesized_audio.length);
                         for (let i = 0; i < data.synthesized_audio.length; i++) {
                             audioArray[i] = data.synthesized_audio.charCodeAt(i) & 0xff;
@@ -166,7 +158,7 @@
                         const audioBlob = new Blob([audioArray], {type: 'audio/wav'});
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayback.src = audioUrl;
-                        audioPlayback.style.display = 'block'; // Show audio element
+                        audioPlayback.style.display = 'block';
 
                         audioPlayback.onloadedmetadata = () => {
                             audioPlayback.play();
@@ -184,12 +176,12 @@
                     console.log(result);
 
                     if (result.error) {
-                        errorMessageDiv.textContent = result.error; // Set only the error message
+                        errorMessageDiv.textContent = result.error;
                     } else {
-                        errorMessageDiv.textContent = 'An unknown error occurred.'; // Fallback message
+                        errorMessageDiv.textContent = 'An unknown error occurred.';
                     }
 
-                    errorMessageDiv.style.display = 'block'; // Show error message
+                    errorMessageDiv.style.display = 'block';
                     console.error('Error processing audio:', result);
                 }
             };
@@ -197,6 +189,8 @@
             mediaRecorder.start();
         } catch (error) {
             console.error('Error during recording setup:', error);
+            errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
+            errorMessageDiv.style.display = 'block';
         }
     };
 
@@ -204,7 +198,7 @@
         recordButton.style.backgroundColor = '#222';
         if (mediaRecorder) {
             mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Stop all audio tracks
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
     };
 
