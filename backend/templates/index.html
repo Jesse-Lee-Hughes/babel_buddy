@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Babel Buddy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sixtyfour+Convergence&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="../static/styles/style.css">
     <link rel="icon" href="../static/images/android-chrome-512x512.png" type="image/png">
     <!-- Open Graph meta tags -->
@@ -30,8 +32,11 @@
             <select id="outputLanguage" class="dropdown"></select>
         </div>
     </div>
-    <button id="recordButton">Translate</button>
-    <div id="errorMessage" style="color: red; display: none;"></div>
+    <button id="recordButton">
+        <img src="path/to/microphone-icon.png" alt="Microphone"/>
+        Hold to Translate
+    </button>
+    <div id="errorMessage" style="color: #a33e1f; display: none;"></div>
     <audio id="audioPlayback" controls style="display:none;"></audio>
     <div id="transcription" style="display:none;"></div>
 </div>
@@ -44,16 +49,17 @@
     const errorMessageDiv = document.getElementById('errorMessage');
 
     const languages = [
-        {code: "en-US", name: "English", buttonText: "Translate"},
-        {code: "zh-HK", name: "Cantonese", buttonText: "翻译"},
-        {code: "zh-CN", name: "Mandarin", buttonText: "翻译"},
-        {code: "th-TH", name: "Thai", buttonText: "แปล"},
-        {code: "fr-FR", name: "French", buttonText: "Traduire"},
-        {code: "ja-JP", name: "Japanese", buttonText: "翻訳する"},
-        {code: "es-ES", name: "Spanish", buttonText: "Traducir"},
-        {code: "ru-RU", name: "Russian", buttonText: "Перевести"},
-        {code: "zu-ZA", name: "Zulu", buttonText: "Humusha"},
+        {code: "en-US", name: "English", buttonText: "Hold to Translate"},
+        {code: "zh-HK", name: "Cantonese", buttonText: "按住以翻译"},
+        {code: "zh-CN", name: "Mandarin", buttonText: "按住以翻译"},
+        {code: "th-TH", name: "Thai", buttonText: "กดค้างเพื่อแปล"},
+        {code: "fr-FR", name: "French", buttonText: "Maintenez pour traduire"},
+        {code: "ja-JP", name: "Japanese", buttonText: "押し続けて翻訳する"},
+        {code: "es-ES", name: "Spanish", buttonText: "Mantén para traducir"},
+        {code: "ru-RU", name: "Russian", buttonText: "Удерживайте для перевода"},
+        {code: "zu-ZA", name: "Zulu", buttonText: "Bamba ukuze uhumelele"},
     ];
+
 
     const populateDropdowns = () => {
         // Clear existing options
@@ -195,7 +201,7 @@
     };
 
     const stopRecording = () => {
-        recordButton.style.backgroundColor = '#6200ea';
+        recordButton.style.backgroundColor = '#222';
         if (mediaRecorder) {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Stop all audio tracks

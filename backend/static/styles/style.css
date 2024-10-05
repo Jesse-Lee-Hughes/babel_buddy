@@ -1,5 +1,5 @@
 body {
-    background-color: #121212;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* Darker and cooler gradient */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -8,12 +8,79 @@ body {
     font-family: Arial, sans-serif;
     color: #ffffff;
     text-align: center;
+    overflow: hidden; /* Hide elements overflowing the viewport */
+    position: relative;
 }
+
+h1 {
+    font-family: 'Sixtyfour Convergence', sans-serif;
+    font-size: 48px; /* Larger size for emphasis */
+    font-weight: bold; /* Bold text for better visibility */
+    color: #fff; /* Use white for contrast against the gradient */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    letter-spacing: 1px; /* Add some spacing between letters for a playful look */
+    margin: 0; /* Reset default margin */
+    padding: 20px; /* Add some padding for better positioning */
+    text-align: center; /* Center text */
+    animation: bounce 2s 5; /* Add a bounce effect */
+}
+
+/* Keyframes for the bounce effect */
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+@keyframes slide-in-r {
+    0% { transform: translateX(-100%); } /* From left */
+    100% { transform: translateX(0); }
+}
+
+.slide-in {
+    animation: slide-in 0.5s forwards;
+}
+
+@keyframes slide-in-l {
+    0% { transform: translateX(+100%); } /* From left */
+    100% { transform: translateX(0); }
+}
+
+.slide-in {
+    animation: slide-in 0.5s backwards;
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.pulse {
+    animation: pulse 1s infinite;
+}
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.rotate {
+    animation: rotate 2s linear infinite;
+}
+
+
 
 .container {
     display: flex;
     flex-direction: column;
     align-items: center;
+    height: auto; /* Allow the height to adjust to content */
+    min-height: 400px; /* Set a minimum height for stability */
+    width: 100%; /* Full width to center the container */
+    max-width: 500px; /* Limit the maximum width for better aesthetics */
 }
 
 .dropdown-container {
@@ -28,28 +95,35 @@ body {
     font-size: 16px;
     border: 1px solid #333;
     border-radius: 5px;
+    font-family: 'Noto Sans', sans-serif;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
     background-color: #222;
-    color: #fff;
+    color: #ec4d4d;
 }
 
 /* Center the record button */
 #recordButton {
-    background-color: #6200ea;
-    color: white;
+    background-color: #222;
+    font-family: 'Noto Sans', sans-serif;
+    color: #ec4d4d;
     border: none;
     padding: 20px 40px;
     font-size: 18px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Added transform for hover effect */
     -webkit-user-select: none; /* Disable text selection on iOS */
     -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
     margin: 20px 0; /* Space between dropdowns and button */
 }
 
 #recordButton:hover {
-    background-color: #3700b3;
+    background-color: #0b0b0b;
+    transform: scale(1.05); /* Slightly enlarge on hover */
 }
+
 
 #audioPlayback {
     display: none;
@@ -62,7 +136,7 @@ body {
     display: none;
     margin-top: 20px;
     font-size: 16px;
-    background-color: #333;
+    background-color: #222;
     padding: 15px;
     border-radius: 5px;
     max-width: 400px;
@@ -76,13 +150,8 @@ body {
 }
 
 /* Ensure everything is centered */
-.container {
-    position: relative; /* Allow absolute positioning of children */
-    height: 100%; /* Full height for centering */
-}
-
 #title {
-    margin-top: 200px;
+    margin-top: 32px; /* Adjust size as needed */
     font-size: 32px; /* Adjust size as needed */
     margin-bottom: 32px; /* Space below the heading */
     color: #ffffff; /* Heading color */
