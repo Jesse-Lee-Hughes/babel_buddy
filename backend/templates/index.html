@@ -33,7 +33,6 @@
         </div>
     </div>
     <button id="recordButton">
-        <!--        <img src="path/to/microphone-icon.png" alt="Microphone"/>-->
         Hold to Translate
     </button>
     <div id="errorMessage" style="color: #a33e1f; display: none;"></div>
@@ -114,19 +113,26 @@
     };
 
     const checkMicrophonePermission = async () => {
+        const micPermissionKey = 'micPermissionGranted';
+
+        // Check if permission has been previously granted
+        if (localStorage.getItem(micPermissionKey) === 'true') {
+            console.log('Microphone permission already granted.');
+            return; // Permission already granted
+        }
+
         try {
             const permission = await navigator.permissions.query({name: 'microphone'});
 
             if (permission.state === 'granted') {
-                // Permission is already granted, you can use the microphone without asking again
-                console.log('Microphone permission already granted.');
+                localStorage.setItem(micPermissionKey, 'true');
+                console.log('Microphone permission granted.');
             } else if (permission.state === 'prompt') {
-                // User has not granted permission yet, request microphone access
                 console.log('Requesting microphone permission...');
                 await requestMicrophoneAccess();
+                localStorage.setItem(micPermissionKey, 'true'); // Store permission status after granting
             } else if (permission.state === 'denied') {
-                // Permission has been denied, show an error or ask the user to change settings
-                console.error('Microphone access denied. Please enable it in your browser settings.');
+                console.error('Microphone access denied.');
                 errorMessageDiv.textContent = 'Microphone access denied. Please enable it in your browser settings.';
                 errorMessageDiv.style.display = 'block';
             }
@@ -144,7 +150,6 @@
         try {
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
             console.log('Microphone access granted.');
-            // You can now start recording
         } catch (error) {
             console.error('Error during microphone access:', error);
             errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
@@ -174,6 +179,7 @@
                 if (audioBlob.size === 0) {
                     errorMessageDiv.textContent = 'No data was recorded. Please try again.';
                     errorMessageDiv.style.display = 'block';
+                    recordButton.style.display = '';
                     return; // Exit the function early
                 }
 
@@ -215,50 +221,30 @@
                         console.error('No audio data returned from the server.');
                     }
 
-                    transcriptionDiv.textContent = data.transcription || 'Transcription unavailable.';
+                    transcriptionDiv.textContent = data.transcription || 'Transcription not available.';
                     transcriptionDiv.style.display = 'block';
                 } else {
-                    const result = await response.json();
-                    console.log(result);
-
-                    if (result.error) {
-                        errorMessageDiv.textContent = result.error;
-                    } else {
-                        errorMessageDiv.textContent = 'An unknown error occurred.';
-                    }
-
+                    console.error('Error in response:', response.statusText);
+                    errorMessageDiv.textContent = 'Error in processing the audio.';
                     errorMessageDiv.style.display = 'block';
-                    console.error('Error processing audio:', result);
                 }
             };
 
             mediaRecorder.start();
         } catch (error) {
-            console.error('Error during recording setup:', error);
-            errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
+            console.error('Error starting recording:', error);
+            errorMessageDiv.textContent = 'Failed to start recording. Please try again.';
             errorMessageDiv.style.display = 'block';
         }
     };
 
     const stopRecording = () => {
-        recordButton.style.backgroundColor = '#222';
-        if (mediaRecorder) {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            recordButton.style.display = 'none';
-        }
+        recordButton.style.backgroundColor = '';
+        mediaRecorder.stop();
     };
 
-    // Add event listeners for both mouse and touch events
     recordButton.addEventListener('mousedown', startRecording);
     recordButton.addEventListener('mouseup', stopRecording);
-    recordButton.addEventListener('touchstart', startRecording);
-    recordButton.addEventListener('touchend', stopRecording);
-
-    // Prevent default context menu and text selection
-    recordButton.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-    });
 </script>
 </body>
 </html>
