@@ -281,13 +281,17 @@
     // Function to Stop Recording
     const stopRecording = () => {
         recordButton.style.backgroundColor = '#222';
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        if (mediaRecorder) {
             mediaRecorder.stop();
-            // Stop all tracks to release the microphone
-            currentStream.getTracks().forEach(track => track.stop());
+
+            // Stop all tracks from the media stream to fully close the connection
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+
+            // Clear the mediaRecorder and stream to ensure no lingering references
+            mediaRecorder = null;
             currentStream = null;
-            console.log('Recording stopped.');
         }
+        console.log('Recorder stopped.')
     };
 
     // Event Listeners for Recording Buttons
