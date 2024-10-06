@@ -33,7 +33,7 @@
         </div>
     </div>
     <button id="recordButton">
-        <!--        <img src="path/to/microphone-icon.png" alt="Microphone"/>-->
+        <!-- <img src="path/to/microphone-icon.png" alt="Microphone"/> -->
         Hold to Translate
     </button>
     <div id="errorMessage" style="color: #a33e1f; display: none;"></div>
@@ -41,6 +41,7 @@
     <div id="transcription" style="display:none;"></div>
 </div>
 <script>
+    // Element References
     const recordButton = document.getElementById('recordButton');
     const audioPlayback = document.getElementById('audioPlayback');
     const transcriptionDiv = document.getElementById('transcription');
@@ -48,6 +49,7 @@
     const outputLanguage = document.getElementById('outputLanguage');
     const errorMessageDiv = document.getElementById('errorMessage');
 
+    // Language Options
     const languages = [
         {code: "en-US", name: "English", buttonText: "Hold to Translate"},
         {code: "zh-HK", name: "Cantonese", buttonText: "按住以翻译"},
@@ -60,6 +62,7 @@
         {code: "zu-ZA", name: "Zulu", buttonText: "Bamba ukuze uhumelele"},
     ];
 
+    // Populate Dropdowns
     const populateDropdowns = () => {
         inputLanguage.innerHTML = '';
         outputLanguage.innerHTML = '';
@@ -73,6 +76,7 @@
         });
     };
 
+    // Update Output Language Dropdown based on Input Language Selection
     const updateOutputDropdown = () => {
         const selectedInputLanguage = inputLanguage.value;
         outputLanguage.innerHTML = '';
@@ -87,51 +91,56 @@
         });
     };
 
+    // Update Record Button Text based on Selected Input Language
     const updateButtonText = () => {
         const selectedLanguage = inputLanguage.value;
         const languageObj = languages.find(lang => lang.code === selectedLanguage);
         recordButton.textContent = languageObj ? languageObj.buttonText : "Translate";
     };
 
-    // Populate the dropdowns on initial load
+    // Initial Setup
     populateDropdowns();
     updateOutputDropdown();
     updateButtonText();
 
-    // Add event listeners
+    // Event Listener for Input Language Change
     inputLanguage.addEventListener('change', () => {
         updateOutputDropdown();
         updateButtonText();
     });
 
+    // MediaRecorder and Stream Variables
     let mediaRecorder;
     let audioChunks = [];
+    let currentStream = null; // Added currentStream declaration
 
-    const hideUIItems = async () => {
+    // Hide UI Elements Function
+    const hideUIItems = () => {
         errorMessageDiv.style.display = 'none';
         transcriptionDiv.style.display = 'none';
         audioPlayback.style.display = 'none';
     };
 
+    // Check Microphone Permission on Page Load
     const checkMicrophonePermission = async () => {
         try {
             const permission = await navigator.permissions.query({name: 'microphone'});
 
             if (permission.state === 'granted') {
-                // Permission is already granted, you can use the microphone without asking again
+                // Permission is already granted
                 console.log('Microphone permission already granted.');
             } else if (permission.state === 'prompt') {
-                // User has not granted permission yet, request microphone access
+                // Request microphone access
                 console.log('Requesting microphone permission...');
                 await requestMicrophoneAccess();
             } else if (permission.state === 'denied') {
-                // Permission has been denied, show an error or ask the user to change settings
+                // Permission has been denied
                 console.error('Microphone access denied. Please enable it in your browser settings.');
                 errorMessageDiv.textContent = 'Microphone access denied. Please enable it in your browser settings.';
                 errorMessageDiv.style.display = 'block';
             }
 
-            // Listen for changes in the permission state
+            // Listen for changes in permission state
             permission.onchange = () => {
                 console.log('Microphone permission state changed to:', permission.state);
             };
@@ -140,11 +149,14 @@
         }
     };
 
+    // Request Microphone Access
     const requestMicrophoneAccess = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
             console.log('Microphone access granted.');
             // You can now start recording
+            // Immediately stop the stream as it's just for permission
+            stream.getTracks().forEach(track => track.stop());
         } catch (error) {
             console.error('Error during microphone access:', error);
             errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
@@ -152,28 +164,39 @@
         }
     };
 
-    // Call this function when the page loads
+    // Call Permission Check on Page Load
     checkMicrophonePermission();
+
+    // Reset Function to Prepare for Next Recording
     const resetForNextRecording = () => {
-        // Hide the audio playback and transcription
+        // Hide audio playback and transcription
         audioPlayback.style.display = 'none';
         transcriptionDiv.style.display = 'none';
 
-        // Clear the audio source
+        // Clear audio source
         audioPlayback.src = '';
 
-        // Reset the record button's appearance if needed
+        // Reset record button appearance
         recordButton.style.backgroundColor = '#222';
 
-        // Optionally, show a message or reset other UI elements
+        // Stop current media stream if exists
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+
+        // Optionally, reset error messages
+        errorMessageDiv.style.display = 'none';
+
         console.log('Ready for the next recording.');
     };
 
+    // Function to Start Recording
     const startRecording = async () => {
         recordButton.style.backgroundColor = 'red';
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-            mediaRecorder = new MediaRecorder(stream);
+            currentStream = await navigator.mediaDevices.getUserMedia({audio: true});
+            mediaRecorder = new MediaRecorder(currentStream);
             audioChunks = []; // Reset audioChunks for new recording
 
             mediaRecorder.ondataavailable = event => {
@@ -182,13 +205,11 @@
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, {type: 'audio/wav'});
-                console.log('Audio Blob size before sending:', audioBlob.size);
 
-                // Handle no data recorded case
                 if (audioBlob.size === 0) {
                     errorMessageDiv.textContent = 'No data was recorded. Please try again.';
                     errorMessageDiv.style.display = 'block';
-                    return; // Exit the function early
+                    return;
                 }
 
                 const formData = new FormData();
@@ -197,78 +218,91 @@
                 formData.append('output_language', outputLanguage.value);
                 hideUIItems();
 
-                console.log("Posting form ", formData);
-                const response = await fetch('/process_audio', {
-                    method: 'POST',
-                    body: formData,
-                });
+                try {
+                    const response = await fetch('/process_audio', {
+                        method: 'POST',
+                        body: formData,
+                    });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.synthesized_audio) {
-                        const audioArray = new Uint8Array(data.synthesized_audio.length);
-                        for (let i = 0; i < data.synthesized_audio.length; i++) {
-                            audioArray[i] = data.synthesized_audio.charCodeAt(i) & 0xff;
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.synthesized_audio) {
+                            const audioArray = new Uint8Array(data.synthesized_audio.length);
+                            for (let i = 0; i < data.synthesized_audio.length; i++) {
+                                audioArray[i] = data.synthesized_audio.charCodeAt(i) & 0xff;
+                            }
+
+                            const synthesizedBlob = new Blob([audioArray], {type: 'audio/wav'});
+                            const audioUrl = URL.createObjectURL(synthesizedBlob);
+                            audioPlayback.src = audioUrl;
+                            audioPlayback.style.display = 'block';
+
+                            audioPlayback.onloadedmetadata = () => {
+                                audioPlayback.play();
+                            };
+
+                            // Reset recorder after playback ends
+                            audioPlayback.onended = () => {
+                                resetForNextRecording();
+                            };
+
+                            console.log('Synthesized Audio Blob size:', synthesizedBlob.size);
+                        } else {
+                            console.error('No audio data returned from the server.');
+                            errorMessageDiv.textContent = 'No audio data returned from the server.';
+                            errorMessageDiv.style.display = 'block';
                         }
 
-                        const audioBlob = new Blob([audioArray], {type: 'audio/wav'});
-                        const audioUrl = URL.createObjectURL(audioBlob);
-                        audioPlayback.src = audioUrl;
-                        audioPlayback.style.display = 'block';
-
-                        audioPlayback.onloadedmetadata = () => {
-                            audioPlayback.play();
-                        };
-                        // Refresh the page once the audio finishes playing
-                        audioPlayback.onended = () => {
-                            resetForNextRecording();
-                        };
-
-                        console.log('Audio Blob size:', audioBlob.size);
+                        transcriptionDiv.textContent = data.transcription || 'Transcription unavailable.';
+                        transcriptionDiv.style.display = 'block';
                     } else {
-                        console.error('No audio data returned from the server.');
+                        const result = await response.json();
+                        errorMessageDiv.textContent = result.error || 'An unknown error occurred.';
+                        errorMessageDiv.style.display = 'block';
+                        console.error('Error processing audio:', result);
                     }
-
-                    transcriptionDiv.textContent = data.transcription || 'Transcription unavailable.';
-                    transcriptionDiv.style.display = 'block';
-                } else {
-                    const result = await response.json();
-                    console.log(result);
-
-                    if (result.error) {
-                        errorMessageDiv.textContent = result.error;
-                    } else {
-                        errorMessageDiv.textContent = 'An unknown error occurred.';
-                    }
-
+                } catch (fetchError) {
+                    console.error('Error during fetch:', fetchError);
+                    errorMessageDiv.textContent = 'Failed to process audio. Please try again.';
                     errorMessageDiv.style.display = 'block';
-                    console.error('Error processing audio:', result);
                 }
             };
 
             mediaRecorder.start();
+            console.log('Recording started.');
         } catch (error) {
-            console.error('Error during recording setup:', error);
+            console.error('Error starting the recording:', error);
             errorMessageDiv.textContent = 'Failed to access the microphone. Please check permissions.';
             errorMessageDiv.style.display = 'block';
+            recordButton.style.backgroundColor = '#222';
         }
     };
 
+    // Function to Stop Recording
     const stopRecording = () => {
         recordButton.style.backgroundColor = '#222';
-        if (mediaRecorder) {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            // Stop all tracks to release the microphone
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+            console.log('Recording stopped.');
         }
     };
 
-    // Add event listeners for both mouse and touch events
+    // Event Listeners for Recording Buttons
     recordButton.addEventListener('mousedown', startRecording);
     recordButton.addEventListener('mouseup', stopRecording);
-    recordButton.addEventListener('touchstart', startRecording);
-    recordButton.addEventListener('touchend', stopRecording);
+    recordButton.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent touch event from triggering mouse events
+        startRecording();
+    });
+    recordButton.addEventListener('touchend', (e) => {
+        e.preventDefault(); // Prevent touch event from triggering mouse events
+        stopRecording();
+    });
 
-    // Prevent default context menu and text selection
+    // Prevent Default Context Menu and Text Selection on Record Button
     recordButton.addEventListener('contextmenu', (event) => {
         event.preventDefault();
     });
