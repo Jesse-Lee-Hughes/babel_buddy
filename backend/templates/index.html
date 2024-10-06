@@ -154,6 +154,20 @@
 
     // Call this function when the page loads
     checkMicrophonePermission();
+    const resetForNextRecording = () => {
+        // Hide the audio playback and transcription
+        audioPlayback.style.display = 'none';
+        transcriptionDiv.style.display = 'none';
+
+        // Clear the audio source
+        audioPlayback.src = '';
+
+        // Reset the record button's appearance if needed
+        recordButton.style.backgroundColor = '#222';
+
+        // Optionally, show a message or reset other UI elements
+        console.log('Ready for the next recording.');
+    };
 
     const startRecording = async () => {
         recordButton.style.backgroundColor = 'red';
@@ -207,7 +221,7 @@
                         };
                         // Refresh the page once the audio finishes playing
                         audioPlayback.onended = () => {
-                            location.reload();
+                            resetForNextRecording();
                         };
 
                         console.log('Audio Blob size:', audioBlob.size);
