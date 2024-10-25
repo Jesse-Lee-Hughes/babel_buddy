@@ -32,6 +32,9 @@
             <select id="outputLanguage" class="dropdown"></select>
         </div>
     </div>
+    <button id="swapLang" onclick="reverseLanguages()">
+        Swap
+    </button>
     <button id="recordButton">
         <!-- <img src="path/to/microphone-icon.png" alt="Microphone"/> -->
         Hold to Translate
@@ -45,8 +48,8 @@
     const recordButton = document.getElementById('recordButton');
     const audioPlayback = document.getElementById('audioPlayback');
     const transcriptionDiv = document.getElementById('transcription');
-    const inputLanguage = document.getElementById('inputLanguage');
-    const outputLanguage = document.getElementById('outputLanguage');
+    let inputLanguage = document.getElementById('inputLanguage');
+    let outputLanguage = document.getElementById('outputLanguage');
     const errorMessageDiv = document.getElementById('errorMessage');
 
     // Language Options
@@ -103,11 +106,6 @@
     updateOutputDropdown();
     updateButtonText();
 
-    // Event Listener for Input Language Change
-    inputLanguage.addEventListener('change', () => {
-        updateOutputDropdown();
-        updateButtonText();
-    });
 
     // MediaRecorder and Stream Variables
     let mediaRecorder;
@@ -292,6 +290,25 @@
             currentStream = null;
         }
         console.log('Recorder stopped.')
+    };
+
+    const reverseLanguages = () => {
+        // Temporarily store the current selections
+        const currentInputLanguage = inputLanguage.value;
+        const currentOutputLanguage = outputLanguage.value;
+
+        // Swap values
+        inputLanguage.value = currentOutputLanguage;
+        outputLanguage.value = currentInputLanguage;
+
+        // Update the output dropdown based on the new input language
+        updateOutputDropdown();
+
+        // Set the output dropdown to the swapped input language
+        outputLanguage.value = currentInputLanguage;
+
+        // Update the button text based on the new input language
+        updateButtonText();
     };
 
     // Event Listeners for Recording Buttons

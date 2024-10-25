@@ -125,6 +125,31 @@ h1 {
 }
 
 
+/* Center the record button */
+#swapLang {
+    background-color: #222;
+    font-family: 'Noto Sans', sans-serif;
+    color: #ec4d4d;
+    border: none;
+    padding: 20px 40px;
+    font-size: 18px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Added transform for hover effect */
+    -webkit-user-select: none; /* Disable text selection on iOS */
+    -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
+    margin: 20px 0; /* Space between dropdowns and button */
+}
+
+#swapLang:hover {
+    background-color: #0b0b0b;
+    transform: scale(1.05); /* Slightly enlarge on hover */
+}
+
+
+
 #audioPlayback {
     display: none;
     margin-top: 20px;
