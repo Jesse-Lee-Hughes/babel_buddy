@@ -125,7 +125,6 @@ h1 {
 }
 
 
-/* Center the record button */
 #swapLang {
     background-color: #222;
     font-family: 'Noto Sans', sans-serif;
@@ -142,12 +141,6 @@ h1 {
     -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
     margin: 20px 0; /* Space between dropdowns and button */
 }
-
-#swapLang:hover {
-    background-color: #0b0b0b;
-    transform: scale(1.05); /* Slightly enlarge on hover */
-}
-
 
 
 #audioPlayback {
