@@ -84,21 +84,26 @@ h1 {
 }
 
 .dropdown-container {
-    display: flex;
-    justify-content: center;
-    gap: 20px; /* Adjust the gap between dropdowns */
-    margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px; /* Adjust the gap between dropdowns as needed */
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 400px; /* Set a max-width to prevent the dropdowns from becoming too wide */
 }
 
 .dropdown {
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #333;
-    border-radius: 5px;
-    font-family: 'Noto Sans', sans-serif;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
-    background-color: #222;
-    color: #ec4d4d;
+  flex: 1; /* Allow the dropdowns to grow and shrink equally */
+  min-width: 150px; /* Set a minimum width to prevent the dropdowns from becoming too small */
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #333;
+  border-radius: 5px;
+  font-family: 'Noto Sans', sans-serif;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+  background-color: #222;
+  color: #ec4d4d;
 }
 
 /* Center the record button */
@@ -141,7 +146,15 @@ h1 {
     -webkit-touch-callout: none; /* Disable callout (context menu) on iOS */
     margin: 20px 0; /* Space between dropdowns and button */
 }
-
+#recordButton,
+#swapLang {
+  width: 250px; /* Set a fixed width for the buttons */
+  padding: 20px 0; /* Adjust the vertical padding to maintain the height */
+  box-sizing: border-box; /* Ensure the width includes the padding */
+  white-space: nowrap; /* Prevent the button text from wrapping */
+  overflow: hidden; /* Hide any text that exceeds the button width */
+  text-overflow: ellipsis; /* Show an ellipsis for hidden text */
+}
 
 #audioPlayback {
     display: none;
